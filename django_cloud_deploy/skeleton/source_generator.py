@@ -674,7 +674,7 @@ class DjangoSourceFileGenerator(_FileGenerator):
         os.environ['DATABASE_PASSWORD'] = database_password
         if cloud_sql_proxy_port:
             os.environ['CLOUD_SQL_PROXY_PORT'] = str(cloud_sql_proxy_port)
-        sys.path.append(project_dir)
+        sys.path = [project_dir] + sys.path
         os.environ['DJANGO_SETTINGS_MODULE'] = '{}.cloud_settings'.format(
             project_name)
         try:
