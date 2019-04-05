@@ -231,6 +231,28 @@ def _password_validate(s):
     return
 
 
+def _database_username_validate(s):
+    """Validates that a string is a valid database user name.
+
+    A valid user name should contain 1 to 63 characters. Only numbers, letters
+    and _ are accepted. It should start with a letter.
+
+    Args:
+        s: The string to validate.
+
+    Raises:
+        ValueError: if the input string is not valid.
+    """
+    if len(s) < 1 or len(s) > 63:
+        raise ValueError('Database user name must be 1 to 63 characters long')
+    if s[0] not in string.ascii_letters:
+        raise ValueError('Database user name must start with a letter')
+    allowed_characters = frozenset(string.ascii_letters + string.digits + '_')
+    if frozenset(s).issuperset(allowed_characters):
+        raise ValueError('Invalid character in database user name. Only '
+                         'numbers, letters, and _ are acceptable.')
+
+
 class Prompt(abc.ABC):
 
     @abc.abstractmethod
@@ -831,6 +853,125 @@ class BillingPrompt(TemplatePrompt):
         ]
         if s not in billing_account_names:
             raise ValueError('The provided billing account does not exist.')
+
+
+class NewDatabaseInformationPrompt(TemplatePrompt):
+    """Allow the user to enter the information about the database."""
+
+    PARAMETER = 'database_information'
+
+    def prompt(self, console: io.IO, step: str,
+               args: Dict[str, Any]) -> Dict[str, Any]:
+        """Extracts user arguments through the command-line.
+
+        Args:
+            console: Object to use for user I/O.
+            step: Message to present to user regarding what step they are on.
+            args: Dictionary holding prompts answered by user and set up
+                command-line arguments.
+
+        Returns:
+            A Copy of args + the new parameter collected.
+        """
+        new_args = dict(args)
+        if self._is_valid_passed_arg(console, step, args.get(self.PARAMETER),
+                                     self._validate):
+            return new_args
+
+        msg = 'Enter the master user name for the database: '
+        username = _ask_prompt(msg, console, _database_username_validate)
+        msg = 'Enter a password for the database user "{}"'.format(username)
+        password = _password_prompt(msg, console)
+        database_info = {
+            'is_new': True,
+            'username': username,
+            'password': password,
+        }
+        new_args[self.PARAMETER] = database_info
+        return new_args
+
+    def _validate(self, database_info: Dict[str, str]):
+        _database_username_validate(database_info.get('username'))
+        _password_validate(database_info.get('password'))
+
+
+class ExistingDatabaseInformationPrompt(TemplatePrompt):
+    """Allow the user to enter the information about an existing database."""
+
+    PARAMETER = 'database_information'
+
+    def prompt(self, console: io.IO, step: str,
+               args: Dict[str, Any]) -> Dict[str, Any]:
+        """Extracts user arguments through the command-line.
+
+        Args:
+            console: Object to use for user I/O.
+            step: Message to present to user regarding what step they are on.
+            args: Dictionary holding prompts answered by user and set up
+                command-line arguments.
+
+        Returns:
+            A Copy of args + the new parameter collected.
+        """
+        new_args = dict(args)
+        if self._is_valid_passed_arg(console, step, args.get(self.PARAMETER),
+                                     self._validate):
+            return new_args
+
+        msg = 'Enter the master user name for the database: '
+        username = _ask_prompt(msg, console, _database_username_validate)
+        msg = 'Enter a password for the database user "{}"'.format(username)
+        password = _password_prompt(msg, console)
+        msg = 'Enter the public ip or host name of your database: '
+        host = _ask_prompt(msg, console)
+        msg = 'Enter the name of your database: '
+        database_name = _ask_prompt(msg, console)
+        database_info = {
+            'is_new': False,
+            'username': username,
+            'password': password,
+            'host': host,
+            'database_name': database_name,
+        }
+        new_args[self.PARAMETER] = database_info
+        return new_args
+
+    def _validate(self, database_info: Dict[str, str]):
+        _database_username_validate(database_info.get('username'))
+        _password_validate(database_info.get('password'))
+
+
+class DatabasePrompt(TemplatePrompt):
+    """Allow the user to enter the information about the db for deployment."""
+
+    PARAMETER = 'database_information'
+
+    def prompt(self, console: io.IO, step: str,
+               args: Dict[str, Any]) -> Dict[str, Any]:
+        """Extracts user arguments through the command-line.
+
+        Args:
+            console: Object to use for user I/O.
+            step: Message to present to user regarding what step they are on.
+            args: Dictionary holding prompts answered by user and set up
+                command-line arguments.
+
+        Returns:
+            A Copy of args + the new parameter collected.
+        """
+        new_args = dict(args)
+        if self._is_valid_passed_arg(console, step,
+                                     args.get(self.PARAMETER), lambda x: x):
+            return new_args
+
+        msg = ('{} Do you want to create a new database or use an existing '
+               'database for deployment? [y/N]').format(step)
+        use_existing_database = binary_prompt(msg, console, default=False)
+
+        if use_existing_database:
+            return ExistingDatabaseInformationPrompt().prompt(console, step, new_args)
+        else:
+            return NewDatabaseInformationPrompt().prompt(console, step, new_args)
 
 
 class PostgresPasswordPrompt(TemplatePrompt):
