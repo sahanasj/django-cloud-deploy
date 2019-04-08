@@ -958,7 +958,7 @@ class NewDatabaseInformationPromptTest(absltest.TestCase):
         self.assertEqual(user, expected_user)
         self.assertEqual(password, expected_password)
         self.assertEmpty(test_io.answers)
-        self.assertEmpty(test_io.password_answers)   # All answers used.
+        self.assertEmpty(test_io.password_answers)  # All answers used.
 
     def test_invalid_password(self):
         test_io = io.TestIO()
@@ -977,7 +977,7 @@ class NewDatabaseInformationPromptTest(absltest.TestCase):
         self.assertEqual(user, expected_user)
         self.assertEqual(password, expected_password)
         self.assertEmpty(test_io.answers)
-        self.assertEmpty(test_io.password_answers)   # All answers used.
+        self.assertEmpty(test_io.password_answers)  # All answers used.
 
     def test_invalid_user(self):
         test_io = io.TestIO()
@@ -995,7 +995,7 @@ class NewDatabaseInformationPromptTest(absltest.TestCase):
         self.assertEqual(user, expected_user)
         self.assertEqual(password, expected_password)
         self.assertEmpty(test_io.answers)
-        self.assertEmpty(test_io.password_answers)   # All answers used.
+        self.assertEmpty(test_io.password_answers)  # All answers used.
 
 
 class ExistingDatabaseInformationPrompt(absltest.TestCase):
@@ -1035,7 +1035,7 @@ class ExistingDatabaseInformationPrompt(absltest.TestCase):
         self.assertEqual(database, expected_db_name)
         self.assertEqual(password, expected_password)
         self.assertEmpty(test_io.answers)
-        self.assertEmpty(test_io.password_answers)   # All answers used.
+        self.assertEmpty(test_io.password_answers)  # All answers used.
 
     @mock.patch('psycopg2.connect')
     def test_fail_to_connect_db(self, mock_connect):
@@ -1077,7 +1077,7 @@ class ExistingDatabaseInformationPrompt(absltest.TestCase):
         self.assertEqual(database, expected_db_name)
         self.assertEqual(password, expected_password)
         self.assertEmpty(test_io.answers)
-        self.assertEmpty(test_io.password_answers)   # All answers used.
+        self.assertEmpty(test_io.password_answers)  # All answers used.
 
 
 if __name__ == '__main__':

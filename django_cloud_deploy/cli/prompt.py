@@ -958,8 +958,8 @@ class ExistingDatabaseInformationPrompt(GroupingPrompt):
             host = _ask_prompt(msg, console)
             default_port = 5432
             msg = ('[{}.b/{}] Enter the port number of your database or '
-                   'press Enter to use "{}":').format(
-                       current_step, total_steps, default_port)
+                   'press Enter to use "{}":').format(current_step, total_steps,
+                                                      default_port)
             port = _ask_prompt(msg, console, default=default_port)
             msg = ('[{}.c/{}] Enter the master user name for the '
                    'database: ').format(current_step, total_steps)
@@ -1048,7 +1048,7 @@ class DatabasePrompt(TemplatePrompt):
         """
         new_args = dict(args)
         msg = ('{} Do you want to create a new database or use an existing '
-               'database for deployment? [y/N]').format(step)
+               'database for deployment? [y/N]: ').format(step)
         use_existing_database = binary_prompt(msg, console, default=False)
 
         if use_existing_database:
