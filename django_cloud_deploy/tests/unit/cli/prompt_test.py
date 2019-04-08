@@ -823,8 +823,9 @@ class DjangoSettingsPathPromptTest(absltest.TestCase):
     def test_settings_file_invalid(self):
         test_io = io.TestIO()
 
-        invalid_settings_path = os.path.join(
-            self.project_dir, self.project_name, 'settings_invalid.py')
+        invalid_settings_path = os.path.join(self.project_dir,
+                                             self.project_name,
+                                             'settings_invalid.py')
         expected_settings_path = os.path.join(self.project_dir,
                                               self.project_name, 'settings.py')
         shutil.copyfile(expected_settings_path, invalid_settings_path)
@@ -916,6 +917,148 @@ class DjangoRequirementsPathPromptTest(absltest.TestCase):
         requirements_path = args.get('django_requirements_path', None)
         self.assertEqual(requirements_path, expected_requirements_path)
         self.assertEmpty(test_io.answers)  # All answers used.
+
+
+class GroupingPromptTest(absltest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.grouping_prompt = prompt.GroupingPrompt()
+
+    def test_parse_step_info(self):
+        step = '<b>[2/12]</b>'
+        current_step, total_steps = self.grouping_prompt.parse_step_info(step)
+        self.assertEqual(current_step, '2')
+        self.assertEqual(total_steps, '12')
+
+
+class NewDatabaseInformationPromptTest(absltest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.db_prompt = prompt.NewDatabaseInformationPrompt()
+
+    def test_valid_db_info(self):
+        test_io = io.TestIO()
+        expected_user = 'admin'
+        expected_password = 'fake_password'
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(
+            test_io,
+            '[1/12]',
+            {},
+        )
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
+
+    def test_invalid_password(self):
+        test_io = io.TestIO()
+
+        expected_user = 'admin'
+        bad_password = '123'
+        expected_password = 'fake_password'
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(bad_password)
+        test_io.password_answers.append(bad_password)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(test_io, '[1/2]', {})
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
+
+    def test_invalid_user(self):
+        test_io = io.TestIO()
+
+        bad_user = '_@9jqads]]]'
+        expected_user = 'admin'
+        expected_password = 'fake_password'
+        test_io.answers.append(bad_user)
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(test_io, '[1/2]', {})
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
+
+
+class ExistingDatabaseInformationPrompt(absltest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.db_prompt = prompt.NewDatabaseInformationPrompt()
+
+    def test_valid_db_info(self):
+        test_io = io.TestIO()
+        expected_user = 'admin'
+        expected_password = 'fake_password'
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(
+            test_io,
+            '[1/12]',
+            {},
+        )
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
+
+    def test_invalid_password(self):
+        test_io = io.TestIO()
+
+        expected_user = 'admin'
+        bad_password = '123'
+        expected_password = 'fake_password'
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(bad_password)
+        test_io.password_answers.append(bad_password)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(test_io, '[1/2]', {})
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
+
+    def test_invalid_user(self):
+        test_io = io.TestIO()
+
+        bad_user = '_@9jqads]]]'
+        expected_user = 'admin'
+        expected_password = 'fake_password'
+        test_io.answers.append(bad_user)
+        test_io.answers.append(expected_user)
+        test_io.password_answers.append(expected_password)
+        test_io.password_answers.append(expected_password)
+        args = self.db_prompt.prompt(test_io, '[1/2]', {})
+        user = args.get('database_username')
+        password = args.get('database_password')
+        self.assertEqual(user, expected_user)
+        self.assertEqual(password, expected_password)
+        self.assertEmpty(test_io.answers)
+        self.assertEmpty(test_io.password_answers)   # All answers used.
 
 
 if __name__ == '__main__':
