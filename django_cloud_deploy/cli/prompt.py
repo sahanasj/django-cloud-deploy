@@ -953,14 +953,16 @@ class ExistingDatabaseInformationPrompt(GroupingPrompt):
 
         current_step, total_steps = self.parse_step_info(step)
         while True:
-            msg = '[{}.a/{}] Enter the public ip or host name of your database: '.format(
-                current_step, total_steps)
+            msg = ('[{}.a/{}] Enter the public ip or host name of your '
+                   'database: ').format(current_step, total_steps)
             host = _ask_prompt(msg, console)
-            msg = '[{}.b/{}] Enter the port number of your database: '.format(
-                current_step, total_steps)
-            port = _ask_prompt(msg, console, default='5432')
-            msg = '[{}.c/{}] Enter the master user name for the database: '.format(
-                current_step, total_steps)
+            default_port = 5432
+            msg = ('[{}.b/{}] Enter the port number of your database or '
+                   'press Enter to use "{}":').format(
+                       current_step, total_steps, default_port)
+            port = _ask_prompt(msg, console, default=default_port)
+            msg = ('[{}.c/{}] Enter the master user name for the '
+                   'database: ').format(current_step, total_steps)
             username = _ask_prompt(msg, console, _database_username_validate)
             msg = '[{}.d/{}] Enter password for the database user "{}"'.format(
                 current_step, total_steps, username)
@@ -1515,7 +1517,6 @@ class RootPrompt(object):
     """Class at the top level that instantiates all of the Prompts."""
 
     NEW_PROMPT_ORDER = [
-        'database_information',
         'project_id',
         'project_name',
         'billing_account_name',
@@ -1557,7 +1558,6 @@ class RootPrompt(object):
         billing_client = billing.BillingClient.from_credentials(creds)
 
         return {
-            'database_information': DatabasePrompt(),
             'project_id': GoogleProjectId(project_client, active_account),
             'project_name': GoogleProjectName(project_client),
             'billing_account_name': BillingPrompt(billing_client),
