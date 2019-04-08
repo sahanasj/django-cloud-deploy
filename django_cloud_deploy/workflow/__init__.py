@@ -299,7 +299,8 @@ class WorkflowManager(object):
                     300, '[9/{}]: Deployment'.format(self._TOTAL_NEW_STEPS)):
                 app_url = self.deploy_workflow.deploy_gae_app(
                     project_id, django_directory_path, is_new=is_new)
-
+        self._static_content_workflow.set_cors_policy(cloud_storage_bucket_name,
+                                                      app_url)
         # Create configuration file to save information needed in "update"
         # command.
 
@@ -522,8 +523,6 @@ class WorkflowManager(object):
     def _create_files_for_secrets(path: str, secrets: Dict[str, Any]):
         """Create secret files for GAE that will be uploaded to GCS buckets.
 
-        Currently, only needed for database password.
-
         Generates JSON files that will be used by the django on GAE.
 
         Args:
@@ -531,10 +530,8 @@ class WorkflowManager(object):
               secrets: Contains the information regarding the credentials.
         """
         os.makedirs(path)
-        secret_name = 'cloudsql'
-        content = secrets['cloudsql']
-        filename = '{}.json'.format(secret_name)
-        file_path = os.path.join(path, filename)
-        with open(file_path, 'w') as file:
-            if secret_name == 'cloudsql':
+        for secret, content in secrets.items():
+            filename = '{}.json'.format(secret)
+            file_path = os.path.join(path, filename)
+            with open(file_path, 'w') as file:
                 json.dump(content, file)
