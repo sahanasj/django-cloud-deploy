@@ -361,8 +361,10 @@ class StringTemplatePrompt(TemplatePrompt):
             msg = '\n'.join([base_message, default_message])
         else:
             msg = base_message
-        answer = _ask_prompt(
-            msg, console, self._validate, default=self.DEFAULT_VALUE)
+        answer = _ask_prompt(msg,
+                             console,
+                             self._validate,
+                             default=self.DEFAULT_VALUE)
         new_args[self.PARAMETER] = answer
         return new_args
 
@@ -408,8 +410,9 @@ class GoogleProjectName(TemplatePrompt):
         validate = functools.partial(self._validate, project_id, mode)
         return _ask_prompt(msg, console, validate, default=default_answer)
 
-    def _is_new_project(
-            self, project_creation_mode: workflow.ProjectCreationMode) -> bool:
+    def _is_new_project(self,
+                        project_creation_mode: workflow.ProjectCreationMode
+                       ) -> bool:
         must_exist = workflow.ProjectCreationMode.MUST_EXIST
         return project_creation_mode != must_exist
 
@@ -507,8 +510,10 @@ class GoogleNewProjectId(TemplatePrompt):
                     'or leave blank to use').format(step)
         msg_default = '[{}]: '.format(default_answer)
         msg = '\n'.join([msg_base, msg_default])
-        answer = _ask_prompt(
-            msg, console, self._validate, default=default_answer)
+        answer = _ask_prompt(msg,
+                             console,
+                             self._validate,
+                             default=default_answer)
         new_args[self.PARAMETER] = answer
         return new_args
 
@@ -704,9 +709,9 @@ class BillingPrompt(TemplatePrompt):
     def __init__(self, billing_client: billing.BillingClient = None):
         self.billing_client = billing_client
 
-    def _get_new_billing_account(
-            self, console,
-            existing_billing_accounts: List[Dict[str, Any]]) -> str:
+    def _get_new_billing_account(self, console,
+                                 existing_billing_accounts: List[Dict[str, Any]]
+                                ) -> str:
         """Ask the user to create a new billing account and return name of it.
 
         Args:
@@ -827,11 +832,14 @@ class BillingPrompt(TemplatePrompt):
 
         billing_accounts = self.billing_client.list_billing_accounts()
         billing_account_names = [
-            account['name'] for account in billing_accounts
+            account['name']
+            for account in billing_accounts
             if account.get('open')
         ]
         if s not in billing_account_names:
-            raise ValueError('The provided billing account does not exist or is not eligible to use.')
+            raise ValueError(
+                'The provided billing account does not exist or is not eligible to use.'
+            )
 
 
 class PostgresPasswordPrompt(TemplatePrompt):
@@ -885,8 +893,8 @@ class DjangoFilesystemPath(TemplatePrompt):
         # method that checks for these.
         default_dir = os.path.join(
             home_dir,
-            args.get('project_name', 'django-project').lower().replace(
-                ' ', '-'))
+            args.get('project_name',
+                     'django-project').lower().replace(' ', '-'))
         default_msg = '[{}]: '.format(default_dir)
 
         msg = '\n'.join([base_msg, default_msg])
@@ -936,8 +944,8 @@ class DjangoFilesystemPathUpdate(TemplatePrompt):
         # method that checks for these.
         default_dir = os.path.join(
             home_dir,
-            args.get('project_name', 'django-project').lower().replace(
-                ' ', '-'))
+            args.get('project_name',
+                     'django-project').lower().replace(' ', '-'))
         default_msg = '[{}]: '.format(default_dir)
 
         msg = '\n'.join([base_msg, default_msg])
@@ -1183,8 +1191,10 @@ class DjangoSettingsPathPrompt(StringTemplatePrompt):
             msg = '\n'.join([base_message, default_message])
         else:
             msg = base_message
-        answer = _ask_prompt(
-            msg, console, validate, default=default_settings_path)
+        answer = _ask_prompt(msg,
+                             console,
+                             validate,
+                             default=default_settings_path)
         new_args[self.PARAMETER] = answer
         return new_args
 
@@ -1264,8 +1274,10 @@ class DjangoRequirementsPathPrompt(StringTemplatePrompt):
             msg = '\n'.join([base_message, default_message])
         else:
             msg = base_message
-        answer = _ask_prompt(
-            msg, console, self._validate, default=default_requirements_path)
+        answer = _ask_prompt(msg,
+                             console,
+                             self._validate,
+                             default=default_requirements_path)
         new_args[self.PARAMETER] = answer
         return new_args
 
