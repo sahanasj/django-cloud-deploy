@@ -30,7 +30,7 @@ with open(os.path.join(here, 'README.md'), 'r') as fh:
 install_requires = [
     'urllib3>=1.23,<2',
     'oauth2client>=4.1.2',
-    'django>=2.1.5,<2.2',
+    'django>=1.11',
     'backoff>=1.8.0',
     'jinja2>=2.10',
     'docker>=3.4.1',
