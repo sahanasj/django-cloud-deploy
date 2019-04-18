@@ -14,6 +14,7 @@
 """Generate source files of a django app ready to be deployed to GKE."""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,7 +25,6 @@ from django.core.management import utils as django_utils
 from django.utils import version
 from django_cloud_deploy import crash_handling
 from django_cloud_deploy.skeleton import requirements_parser
-from django_cloud_deploy.skeleton import utils
 import jinja2
 
 
@@ -225,14 +225,19 @@ class _DjangoProjectFileGenerator(_Jinja2FileGenerator):
             new_settings_module: The new settings module to replace the old one.
                 For example, mysite.cloud_settings.
         """
-        old_settings_module = utils.parse_settings_module(file_path)
-        if old_settings_module:
-            with open(file_path) as f:
-                content = f.read()
-                content = content.replace(old_settings_module,
-                                          new_settings_module)
-            with open(file_path, 'w') as f:
-                f.write(content)
+        with open(file_path) as f:
+            file_content = f.read()
+
+        with open(file_path, 'wt') as f:
+            settings_module_line = re.search(
+                r'os\.environ\.setdefault\([^\)]+,[^\)]+\)', file_content)
+            if settings_module_line:
+                new_settings_module_line = (
+                    'os.environ.setdefault(\'DJANGO_SETTINGS_MODULE\''
+                    ', \'{}\')').format(new_settings_module)
+                file_content = file_content.replace(
+                    settings_module_line.group(0), new_settings_module_line)
+                f.write(file_content)
 
 
 class _DjangoAppFileGenerator(_Jinja2FileGenerator):
@@ -256,56 +261,6 @@ class _DjangoAppFileGenerator(_Jinja2FileGenerator):
         self._generate_files(self.APP_TEMPLATE_FOLDER,
                              app_destination,
                              options=options)
-
-
-class _DjangoAdminOverwriteGenerator(_Jinja2FileGenerator):
-    """Generate Django admin app overwrite files."""
-
-    ADMIN_OVERWRITE_APP_NAME = 'cloud_admin'
-    ADMIN_TEMPLATE_FOLDER = 'admin_template'
-    TEMPLATES_TEMPLATE_FOLDER = 'templates_template'
-    STATIC_TEMPLATE_FOLDER = 'static_template'
-
-    def generate_new(self, project_id: str, project_name: str,
-                     project_dir: str):
-        self._generate_admin_files(project_id, project_name, project_dir)
-        self._generate_templates_files(project_dir)
-        self._generate_static_files(project_dir)
-
-    def _generate_admin_files(self, project_id: str, project_name: str,
-                              project_dir: str):
-        """Create the django admin using our template.
-
-        Args:
-            project_id: The GCP project id.
-            project_name: Name of the project to be created.
-            project_dir: Destination path to hold files.
-        """
-        options = {'project_id': project_id, 'project_name': project_name}
-        admin_destination = os.path.join(project_dir,
-                                         self.ADMIN_OVERWRITE_APP_NAME)
-        self._generate_files(self.ADMIN_TEMPLATE_FOLDER,
-                             admin_destination,
-                             options=options)
-
-    def _generate_templates_files(self, project_dir: str):
-        """Create the django templates using our template.
-
-        Args:
-            project_dir: Destination path to hold files.
-        """
-        templates_destination = os.path.join(project_dir, 'templates')
-        self._generate_files(self.TEMPLATES_TEMPLATE_FOLDER,
-                             templates_destination)
-
-    def _generate_static_files(self, project_dir: str):
-        """Create our custom static files for the django app.
-
-        Args:
-            project_dir: Destination path to hold files.
-        """
-        static_destination = os.path.join(project_dir, 'staticfiles')
-        self._generate_files(self.STATIC_TEMPLATE_FOLDER, static_destination)
 
 
 class _SettingsFileGenerator(_Jinja2FileGenerator):
@@ -680,7 +635,6 @@ class DjangoSourceFileGenerator(_FileGenerator):
     """The class to create all necessary Django source files."""
 
     def __init__(self):
-        self.django_admin_overwrite_generator = _DjangoAdminOverwriteGenerator()
         self.django_app_generator = _DjangoAppFileGenerator()
         self.django_project_generator = _DjangoProjectFileGenerator()
         self.docker_file_generator = _DockerfileGenerator()
@@ -806,8 +760,6 @@ class DjangoSourceFileGenerator(_FileGenerator):
             project_id, region, instance_name))
         self.django_project_generator.generate_new(project_name, project_dir,
                                                    app_name)
-        self.django_admin_overwrite_generator.generate_new(
-            project_id, project_name, project_dir)
         self.django_app_generator.generate_new(app_name, project_dir)
         self.settings_file_generator.generate_new(
             project_id, project_name, project_dir, cloud_sql_connection_string,
@@ -886,8 +838,6 @@ class DjangoSourceFileGenerator(_FileGenerator):
         # Django project
         self.django_project_generator.generate_from_existing(
             project_name, project_dir, django_settings_path)
-        self.django_admin_overwrite_generator.generate_new(
-            project_id, project_name, project_dir)
         self.settings_file_generator.generate_from_existing(
             project_id, project_name, cloud_sql_connection_string,
             django_settings_path, database_name, cloud_storage_bucket_name,

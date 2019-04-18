@@ -24,6 +24,7 @@ import string
 import sys
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
+import warnings
 
 from django_cloud_deploy import workflow
 from django_cloud_deploy.cli import io
@@ -32,6 +33,7 @@ from django_cloud_deploy.cloudlib import billing
 from django_cloud_deploy.cloudlib import project
 from django_cloud_deploy.skeleton import utils
 from django_cloud_deploy.utils import webbrowser
+from google.oauth2 import service_account
 import psycopg2
 
 
@@ -702,6 +704,22 @@ class CredentialsPrompt(TemplatePrompt):
                                      args.get(self.PARAMETER), lambda x: x):
             return new_args
 
+        if args.get('credentials_path'):
+            credentials_path = args.get('credentials_path')
+            try:
+                credentials = (
+                    service_account.Credentials.from_service_account_file(
+                        credentials_path,
+                        scopes=[
+                            'https://www.googleapis.com/auth/cloud-platform'
+                        ]))
+                new_args['credentials'] = credentials
+                return new_args
+            except Exception as e:
+                warnings.warn(
+                    ('File "{}" does not exist or is not a valid credentials '
+                     'file.\n{}'.format(credentials_path, e)))
+
         console.tell(
             ('{} In order to deploy your application, you must allow Django '
              'Deploy to access your Google account.').format(step))
@@ -852,12 +870,15 @@ class BillingPrompt(TemplatePrompt):
             ValueError: if the input string is not valid.
         """
 
-        billing_accounts = self.billing_client.list_billing_accounts()
+        billing_accounts = self.billing_client.list_billing_accounts(
+            only_open_accounts=True)
         billing_account_names = [
             account['name'] for account in billing_accounts
         ]
         if s not in billing_account_names:
-            raise ValueError('The provided billing account does not exist.')
+            raise ValueError(
+                'The provided billing account does not exist or is not eligible to use.'
+            )
 
 
 class GroupingPrompt(TemplatePrompt):
@@ -1261,6 +1282,60 @@ class DjangoProjectNamePrompt(StringTemplatePrompt):
                               'must be a valid Python identifier').format(s))
 
 
+class DjangoProjectNamePromptCloudify(TemplatePrompt):
+    """Allow the user to enter a Django project name.
+
+    The prompt will try guessing the Django project name first. If it failed,
+    ask the user to provide it.
+    """
+
+    PARAMETER = 'django_project_name_cloudify'
+    MESSAGE = '{} Enter the Django project name: '
+
+    def prompt(self, console: io.IO, step: str,
+               args: Dict[str, Any]) -> Dict[str, Any]:
+        """Extracts user arguments through the command-line.
+
+        Args:
+            console: Object to use for user I/O.
+            step: Message to present to user regarding what step they are on.
+            args: Dictionary holding prompts answered by user and set up
+                command-line arguments.
+
+        Returns:
+            A Copy of args + the new parameter collected.
+        """
+        assert 'django_directory_path_cloudify' in args, (
+            'The absolute path of Django project must be provided')
+        new_args = dict(args)
+        django_directory_path = args['django_directory_path_cloudify']
+        django_project_name = utils.get_django_project_name(
+            django_directory_path)
+        new_args[self.PARAMETER] = django_project_name
+        if self._is_valid_passed_arg(console, step,
+                                     new_args.get(self.PARAMETER, None),
+                                     self._validate):
+            return new_args
+
+        msg = self.MESSAGE.format(step)
+        answer = _ask_prompt(msg, console, self._validate)
+        new_args[self.PARAMETER] = answer
+        return new_args
+
+    def _validate(self, s: str):
+        """Validates that a string is a valid Django project name.
+
+        Args:
+            s: The string to validate.
+
+        Raises:
+            ValueError: if the input string is not valid.
+        """
+        if not s.isidentifier():
+            raise ValueError(('Invalid Django project name "{}": '
+                              'must be a valid Python identifier').format(s))
+
+
 class DjangoAppNamePrompt(StringTemplatePrompt):
     """Allow the user to enter a Django project name."""
 
@@ -1540,6 +1615,7 @@ class RootPrompt(object):
         'billing_account_name',
         'database_password',
         'django_directory_path_cloudify',
+        'django_project_name_cloudify',
         'django_requirements_path',
         'django_settings_path',
         'django_superuser_login',
@@ -1566,6 +1642,7 @@ class RootPrompt(object):
             'django_directory_path_update': DjangoFilesystemPathUpdate(),
             'django_directory_path_cloudify': DjangoFilesystemPathCloudify(),
             'django_project_name': DjangoProjectNamePrompt(),
+            'django_project_name_cloudify': DjangoProjectNamePromptCloudify(),
             'django_app_name': DjangoAppNamePrompt(),
             'django_requirements_path': DjangoRequirementsPathPrompt(),
             'django_settings_path': DjangoSettingsPathPrompt(),
