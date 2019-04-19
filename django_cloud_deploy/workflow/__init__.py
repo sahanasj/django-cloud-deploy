@@ -19,6 +19,7 @@ import shutil
 import socket
 from typing import Any, Dict, List, Optional, Tuple
 
+from django.conf import settings
 from django_cloud_deploy import config
 from django_cloud_deploy.cli import io
 from django_cloud_deploy.cloudlib import billing
@@ -180,7 +181,7 @@ class WorkflowManager(object):
             django_directory_path, 'requirements.txt')
         image_name = '/'.join(
             ['gcr.io', project_id, sanitized_django_project_name])
-        static_content_dir = os.path.join(django_directory_path, 'static')
+        static_content_dir = settings.STATIC_ROOT
 
         cloud_sql_proxy_port = portpicker.pick_unused_port()
 
