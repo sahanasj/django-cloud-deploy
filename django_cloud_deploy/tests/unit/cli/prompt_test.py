@@ -1084,7 +1084,7 @@ class DjangoProjectNamePromptCloudifyTest(absltest.TestCase):
     """Tests for prompt.DjangoProjectNamePromptCloudify."""
 
     def setUpClass(cls):
-        super().setUpClass()
+        super().setUpClass(cls)
         cls.name_prompt = prompt.DjangoProjectNamePromptCloudify()
 
     def setUp(self):
