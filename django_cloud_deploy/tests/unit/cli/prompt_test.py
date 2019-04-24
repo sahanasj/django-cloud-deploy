@@ -180,6 +180,17 @@ class DjangoAppNamePromptTest(absltest.TestCase):
         self.assertEqual(name, 'djangoapp')
         self.assertEqual(len(test_io.answers), 0)  # All answers used.
 
+    def test_prompt_same_name_as_project(self):
+        test_io = io.TestIO()
+
+        test_io.answers.append('djangoproject')
+        test_io.answers.append('djangoapp')
+        args = {'django_project_name': 'djangoproject'}
+        args = self.django_app_name_prompt.prompt(test_io, '[1/2]', args)
+        name = args['django_app_name']
+        self.assertEqual(name, 'djangoapp')
+        self.assertEqual(len(test_io.answers), 0)  # All answers used.
+
 
 class DjangoSuperuserLoginPromptTest(absltest.TestCase):
     """Tests for prompt.DjangoSuperuserLoginPrompt."""
@@ -916,6 +927,56 @@ class DjangoRequirementsPathPromptTest(absltest.TestCase):
         )
         requirements_path = args.get('django_requirements_path', None)
         self.assertEqual(requirements_path, expected_requirements_path)
+        self.assertEmpty(test_io.answers)  # All answers used.
+
+
+class DjangoProjectNamePromptCloudifyTest(absltest.TestCase):
+    """Tests for prompt.DjangoProjectNamePromptCloudify."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.name_prompt = prompt.DjangoProjectNamePromptCloudify()
+
+    def setUp(self):
+        super().setUp()
+        self.project_name = 'mysite'
+        self.project_dir = tempfile.mkdtemp()
+        management.call_command('startproject', self.project_name,
+                                self.project_dir)
+
+    def tearDown(self):
+        super().tearDown()
+        shutil.rmtree(self.project_dir)
+
+    def test_prompt(self):
+        test_io = io.TestIO()
+        args = self.name_prompt.prompt(
+            test_io,
+            '[2/2]',
+            {'django_directory_path_cloudify': self.project_dir},
+        )
+        project_name = args.get('django_project_name_cloudify', None)
+        self.assertEqual(self.project_name, project_name)
+        self.assertEmpty(test_io.answers)  # All answers used.
+
+    def test_cannot_find_project_name(self):
+        test_io = io.TestIO()
+        manage_py_path = os.path.join(self.project_dir, 'manage.py')
+        with open(manage_py_path) as f:
+            file_content = f.read()
+        with open(manage_py_path, 'wt') as f:
+            file_content = file_content.replace(
+                '\'{}.settings\''.format(self.project_name), 'module_variable')
+            f.write(file_content)
+        test_io.answers.append('mysite')
+        args = self.name_prompt.prompt(
+            test_io,
+            '[2/2]',
+            {'django_directory_path_cloudify': self.project_dir},
+        )
+        project_name = args.get('django_project_name_cloudify', None)
+        self.assertEqual(self.project_name, project_name)
         self.assertEmpty(test_io.answers)  # All answers used.
 
 

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Integration tests for module django_cloud_deploy.cloudlib."""
 
+from django_cloud_deploy.cloudlib import cloudbuild
+from django_cloud_deploy.cloudlib import cloud_source
 from django_cloud_deploy.cloudlib import container
 from django_cloud_deploy.cloudlib import database
 from django_cloud_deploy.cloudlib import service_account
@@ -115,3 +117,80 @@ class ContainerClientIntegrationTest(test_base.ResourceCleanUp):
             for _ in range(2):
                 self._container_client.create_cluster_sync(
                     self.project_id, cluster_name)
+
+
+class CloudBuildClientIntegrationTest(test_base.ResourceCleanUp,
+                                      test_base.ResourceList):
+    """Integration test for django_cloud_deploy.cloudlib.cloudbuild."""
+
+    def setUp(self):
+        super().setUp()
+        self._cloudbuild_client = cloudbuild.CloudBuildClient.from_credentials(
+            self.credentials)
+
+    def test_create_trigger(self):
+        fake_repo_name = utils.get_resource_name(resource_type='repo')
+        branch_regexp = 'fake-branch'
+        env_vars = {
+            'MY_ENV_VAR1': utils.get_resource_name(resource_type='envvar'),
+            'MY_ENV_VAR2': utils.get_resource_name(resource_type='envvar')
+        }
+        with self.clean_up_cloudbuild_trigger(fake_repo_name):
+            self._cloudbuild_client.create_trigger(self.project_id,
+                                                   fake_repo_name,
+                                                   branch_regexp, env_vars)
+            service = discovery.build('cloudbuild',
+                                      'v1',
+                                      credentials=self.credentials,
+                                      cache_discovery=False)
+            request = service.projects().triggers().list(
+                projectId=self.project_id)
+            triggers = []
+            while request:
+                response = request.execute()
+                triggers += response.get('triggers', [])
+                request = service.projects().triggers().list_next(
+                    previous_request=request, previous_response=response)
+            trigger_repo_names = [
+                trigger.get('triggerTemplate').get('repoName')
+                for trigger in triggers
+            ]
+            self.assertIn(fake_repo_name, trigger_repo_names)
+            for trigger in triggers:
+                repo_name = trigger.get('triggerTemplate').get('repoName')
+                if repo_name == fake_repo_name:
+                    self.assertDictEqual(env_vars, trigger.get('substitutions'))
+
+
+class CloudSourceRepositoryClientIntegrationTest(test_base.ResourceCleanUp):
+
+    def setUp(self):
+        super().setUp()
+        self._cloudsource_client = \
+            cloud_source.CloudSourceRepositoryClient.from_credentials(
+                self.credentials)
+        self._cloudsource_service = \
+            self._cloudsource_client._cloudsource_service
+
+    def _create_repo(self, project_id, repo_name):
+        parent = 'projects/{}'.format(project_id)
+        resource_name = 'projects/{}/repos/{}'.format(project_id, repo_name)
+        body = {
+            'name': resource_name,
+        }
+        request = self._cloudsource_service.projects().repos().create(
+            parent=parent, body=body)
+        request.execute(num_retries=5)
+
+    def test_list_repos(self):
+        repo_name = utils.get_resource_name(resource_type='repo')
+        full_repo_name = 'projects/{}/repos/{}'.format(self.project_id,
+                                                       repo_name)
+        prev_repos = self._cloudsource_client.list_repos(self.project_id)
+        prev_repo_names = [repo.get('name') for repo in prev_repos]
+        self.assertNotIn(full_repo_name, prev_repo_names)
+        with self.clean_up_repo(repo_name):
+            self._create_repo(self.project_id, repo_name)
+            cur_repos = self._cloudsource_client.list_repos(self.project_id)
+            repo_names = [repo.get('name') for repo in cur_repos]
+            self.assertIn(full_repo_name, repo_names)

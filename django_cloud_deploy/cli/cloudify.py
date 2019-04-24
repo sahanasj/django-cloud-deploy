@@ -42,12 +42,17 @@ def add_arguments(parser):
         'stored.')
 
     parser.add_argument(
-        '--django_requirements_path',
+        '--django-requirements-path',
         dest='django_requirements_path',
         help='The location of the Django project requirements.txt.')
 
     parser.add_argument(
-        '--billing_account_name',
+        '--django-settings-path',
+        dest='django_settings_path',
+        help='The absolute path of the settings file of a Django project.')
+
+    parser.add_argument(
+        '--billing-account-name',
         dest='billing_account_name',
         help='Name of the GCP Billing account name to be associated with the '
         'project.')
@@ -86,11 +91,16 @@ def add_arguments(parser):
                         choices=['gae', 'gke'],
                         help='The desired backend to deploy the Django App on.')
 
+    parser.add_argument('--credentials',
+                        dest='credentials',
+                        help=('The credentials object to use for deployment. '
+                              'Test only, do not use.'))
+
     parser.add_argument(
-        '--credentials',
-        dest='credentials',
-        help=('The file path of the credentials file to use for deployment. '
-              'Test only, do not use.'))
+        '--credentials-path',
+        dest='credentials_path',
+        help=('The absolute path of the credentials file to use for '
+              'deployment.'))
 
     parser.add_argument('--bucket-name',
                         dest='bucket_name',
@@ -117,6 +127,13 @@ def add_arguments(parser):
         help=('App engine service name. Test only, do not use.'))
 
     parser.add_argument(
+        '--cluster-name',
+        dest='cluster_name',
+        nargs='+',
+        help=('Name of the cluster to use for deploying on GKE. Test only, do '
+              'not use.'))
+
+    parser.add_argument(
         '--database-instance-name',
         dest='database_instance_name',
         nargs='+',
@@ -135,6 +152,7 @@ def main(args: argparse.Namespace, console: io.IO = io.ConsoleIO()):
         'service_accounts': getattr(args, 'service_accounts', None),
         'services': getattr(args, 'services', None),
         'appengine_service_name': getattr(args, 'appengine_service_name', None),
+        'cluster_name': getattr(args, 'cluster_name', None),
         'database_instance_name': getattr(args, 'database_instance_name', None),
     }
 
@@ -163,6 +181,7 @@ def main(args: argparse.Namespace, console: io.IO = io.ConsoleIO()):
                 'django_requirements_path'),
             django_settings_path=actual_parameters['django_settings_path'],
             database_password=actual_parameters['database_password'],
+            cluster_name=actual_parameters['cluster_name'],
             database_instance_name=actual_parameters['database_instance_name'],
             required_services=actual_parameters['services'],
             required_service_accounts=actual_parameters['service_accounts'],

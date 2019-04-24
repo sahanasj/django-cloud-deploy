@@ -30,7 +30,7 @@ def add_arguments(parser):
 
     parser.add_argument(
         '--project-path',
-        dest='django_directory_path',
+        dest='django_directory_path_update',
         help='The location where the generated Django project code should be '
         'stored.')
 
@@ -38,11 +38,23 @@ def add_arguments(parser):
                         dest='database_password',
                         help='The password for the default database user.')
 
+    parser.add_argument('--credentials',
+                        dest='credentials',
+                        help=('The credentials object to use for deployment. '
+                              'Test only, do not use.'))
+
     parser.add_argument(
-        '--credentials',
-        dest='credentials',
-        help=('The file path of the credentials file to use for update. '
-              'Test only, do not use.'))
+        '--credentials-path',
+        dest='credentials_path',
+        help=('The absolute path of the credentials file to use for '
+              'deployment.'))
+
+    parser.add_argument(
+        '--cluster-name',
+        dest='cluster_name',
+        nargs='+',
+        help=('Name of the cluster to use for deploying on GKE. Test only, do '
+              'not use.'))
 
     parser.add_argument(
         '--database-instance-name',
@@ -55,6 +67,7 @@ def add_arguments(parser):
 def main(args: argparse.Namespace, console: io.IO = io.ConsoleIO()):
 
     actual_parameters = {
+        'cluster_name': getattr(args, 'cluster_name', None),
         'database_instance_name': getattr(args, 'database_instance_name', None),
     }
     prompt_args = {**vars(args), **actual_parameters}
@@ -82,6 +95,7 @@ def main(args: argparse.Namespace, console: io.IO = io.ConsoleIO()):
     workflow_manager.update_project(
         django_directory_path=actual_parameters['django_directory_path_update'],
         database_password=actual_parameters['database_password'],
+        cluster_name=actual_parameters['cluster_name'],
         database_instance_name=actual_parameters['database_instance_name'])
 
 
